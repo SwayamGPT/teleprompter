@@ -1,0 +1,38 @@
+{
+  "name": "stealth-teleprompter",
+  "version": "1.0.0",
+  "description": "A Windows teleprompter whose window is invisible to screen recording and screen sharing.",
+  "main": "src/main.js",
+  "author": "SwayamGPT",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win",
+    "dist:portable": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "com.swayamgpt.stealthteleprompter",
+    "productName": "Stealth Teleprompter",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "portable": {
+      "artifactName": "StealthTeleprompter-${version}-portable.exe"
+    }
+  }
+}

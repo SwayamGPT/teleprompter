@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'">
+  <title>Stealth Teleprompter</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="mode-edit">
+  <header id="toolbar">
+    <div class="drag">
+      <span class="brand">Teleprompter</span>
+      <span id="capture-pill" class="pill ok" title="Whether this window appears in screen recordings">Hidden from capture</span>
+    </div>
+    <div class="controls">
+      <button id="btn-play" class="prompt-only" title="Play / pause (Space · Ctrl+Alt+Space)">▶</button>
+      <button id="btn-restart" class="prompt-only" title="Back to top (Home · Ctrl+Alt+R)">⟲</button>
+      <span class="group" title="Scroll speed (↑ / ↓ · Ctrl+Alt+↑ / ↓)">
+        <button id="btn-slower">−</button><span id="speed-val">8</span><button id="btn-faster">+</button>
+      </span>
+      <span class="group" title="Font size (Ctrl + / Ctrl −)">
+        <button id="btn-font-down">A−</button><button id="btn-font-up">A+</button>
+      </span>
+      <button id="btn-mode" title="Switch between editing and prompting (Esc)">Start prompting</button>
+      <button id="btn-min" class="win" title="Minimise">—</button>
+      <button id="btn-close" class="win close" title="Close">✕</button>
+    </div>
+  </header>
+
+  <div id="click-through-banner" hidden>Click-through is on · press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>T</kbd> to turn it off</div>
+  <div id="os-warning" hidden></div>
+
+  <!-- Edit mode -->
+  <section id="editor">
+    <textarea id="script" spellcheck="true" placeholder="Paste your script here, or open a .txt / .md file.
+
+Tips:
+• Blank lines become paragraph breaks.
+• Text in [square brackets] is shown as a cue, e.g. [pause] or [smile]."></textarea>
+    <div id="settings">
+      <button id="btn-open">Open file…</button>
+      <label>Opacity <input id="opacity" type="range" min="20" max="100" value="100"></label>
+      <label><input id="opt-mirror" type="checkbox"> Mirror</label>
+      <label><input id="opt-guide" type="checkbox" checked> Reading line</label>
+      <label><input id="opt-countdown" type="checkbox" checked> 3-2-1 countdown</label>
+      <label><input id="opt-click-through" type="checkbox"> Click-through</label>
+      <label class="danger" title="Turn off to check that your recorder really can't see this window"><input id="opt-protect" type="checkbox" checked> Hide from capture</label>
+      <span id="word-count"></span>
+    </div>
+  </section>
+
+  <!-- Prompt mode -->
+  <section id="prompter" tabindex="0">
+    <div id="guide"></div>
+    <div id="scroller"><div id="content"></div></div>
+    <div id="countdown" hidden></div>
+    <div id="progress"><div id="progress-bar"></div></div>
+  </section>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
