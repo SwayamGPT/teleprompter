@@ -180,6 +180,23 @@ ipcMain.on('set-protection', (_e, on) => {
 });
 
 ipcMain.on('set-click-through', (_e, on) => setClickThrough(!!on));
+// Ctrl+Shift+Up/Down normally selects text in other apps, so we only claim
+// these global hotkeys while the teleprompter is in prompting mode.
+const SCROLL_KEYS = {
+  'CommandOrControl+Shift+Up': 'scroll-up',
+  'CommandOrControl+Shift+Down': 'scroll-down',
+};
+function setScrollKeys(on) {
+  for (const [accel, action] of Object.entries(SCROLL_KEYS)) {
+    if (on && !globalShortcut.isRegistered(accel)) {
+      globalShortcut.register(accel, () => win && win.webContents.send('shortcut', action));
+    } else if (!on && globalShortcut.isRegistered(accel)) {
+      globalShortcut.unregister(accel);
+    }
+  }
+}
+ipcMain.on('mode', (_e, mode) => setScrollKeys(mode === 'prompt'));
+
 ipcMain.on('minimize', () => win && win.minimize());
 ipcMain.on('close', () => win && win.close());
 

@@ -135,6 +135,25 @@
     paint();
   }
 
+  // Smooth manual scrolling (Ctrl+Shift+Up/Down). Each press queues one line;
+  // holding the key auto-repeats, giving continuous scrolling.
+  let pendingScroll = 0;
+  let smoothing = false;
+  function smoothScroll(lines) {
+    pendingScroll += lines * s.fontSize * 1.45;
+    if (!smoothing) { smoothing = true; requestAnimationFrame(stepSmooth); }
+  }
+  function stepSmooth() {
+    const step = Math.abs(pendingScroll) < 1 ? pendingScroll : pendingScroll * 0.25;
+    pendingScroll -= step;
+    const next = Math.min(maxOffset, Math.max(0, offset + step));
+    if (next === offset) pendingScroll = 0; // hit the top or the end
+    offset = next;
+    paint();
+    if (pendingScroll !== 0) requestAnimationFrame(stepSmooth);
+    else smoothing = false;
+  }
+
   function restart() {
     setPlaying(false);
     offset = 0;
@@ -160,6 +179,7 @@
   // ---------- Modes ----------
   function setMode(m) {
     mode = m;
+    api.setMode(m);
     document.body.classList.toggle('mode-edit', m === 'edit');
     document.body.classList.toggle('mode-prompt', m === 'prompt');
     els.mode.textContent = m === 'edit' ? 'Start prompting' : 'Edit script';
@@ -242,6 +262,10 @@
     if (ctrl && e.key === 'Enter') { e.preventDefault(); return setMode(mode === 'edit' ? 'prompt' : 'edit'); }
     if (ctrl && e.key.toLowerCase() === 'o') { e.preventDefault(); return $('btn-open').click(); }
     if (mode !== 'prompt') return;
+    if (ctrl && e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      return smoothScroll(e.key === 'ArrowUp' ? -1 : 1);
+    }
     switch (e.key) {
       case ' ': e.preventDefault(); togglePlay(); break;
       case 'ArrowUp': e.preventDefault(); changeSpeed(1); break;
@@ -264,6 +288,8 @@
     else if (action === 'rewind') nudge(-3);
     else if (action === 'forward') nudge(3);
     else if (action === 'restart') restart();
+    else if (action === 'scroll-up') smoothScroll(-1);
+    else if (action === 'scroll-down') smoothScroll(1);
   });
 
   // Capture-protection / click-through state from the main process.

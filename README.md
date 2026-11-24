@@ -35,6 +35,7 @@ The app calls the Windows API `SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAP
 | --- | --- |
 | `Ctrl+Alt+Space` | Play / pause (also switches to prompt mode) |
 | `Ctrl+Alt+↑` / `↓` | Faster / slower |
+| `Ctrl+Shift+↑` / `↓` | Scroll the script up / down one line (hold to keep scrolling). Active only in prompting mode, so the shortcut still selects text in other apps while you're editing. |
 | `Ctrl+Alt+←` / `→` | Jump back / forward 3 lines |
 | `Ctrl+Alt+R` | Back to the top |
 | `Ctrl+Alt+T` | Toggle click-through |
