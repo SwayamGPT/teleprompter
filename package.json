@@ -19,7 +19,11 @@
     "productName": "Stealth Teleprompter",
     "files": [
       "src/**/*",
-      "package.json"
+      "package.json",
+      "!node_modules/koffi/build/koffi/{darwin,freebsd,linux,musl,openbsd}_*/**"
+    ],
+    "asarUnpack": [
+      "node_modules/koffi/**"
     ],
     "win": {
       "target": [
@@ -34,5 +38,8 @@
     "portable": {
       "artifactName": "StealthTeleprompter-${version}-portable.exe"
     }
+  },
+  "dependencies": {
+    "koffi": "2.16.3"
   }
 }

@@ -4,8 +4,70 @@ const path = require('path');
 const fs = require('fs');
 
 let win = null;
-let protectedFromCapture = true;
+let protectedFromCapture = true;   // what the user asked for
+let actualAffinity = null;         // what Windows reports back
 let clickThrough = false;
+
+// ---------- Win32 capture exclusion ----------
+// Electron's setContentProtection() uses WDA_EXCLUDEFROMCAPTURE too, but the
+// setting can be silently lost (e.g. when it is applied before the window is
+// first shown, or when the window becomes layered for opacity). So we also
+// call user32 directly, re-apply on every show/restore/opacity change, and
+// read the real value back so the UI never claims protection it doesn't have.
+const WDA_NONE = 0x00;
+const WDA_MONITOR = 0x01;              // pre-2004 fallback: shows as black box
+const WDA_EXCLUDEFROMCAPTURE = 0x11;   // Win10 2004+: fully invisible
+
+let user32 = null;
+if (process.platform === 'win32') {
+  try {
+    const koffi = require('koffi');
+    const lib = koffi.load('user32.dll');
+    user32 = {
+      setAffinity: lib.func('int __stdcall SetWindowDisplayAffinity(intptr_t hWnd, uint32_t dwAffinity)'),
+      getAffinity: lib.func('int __stdcall GetWindowDisplayAffinity(intptr_t hWnd, _Out_ uint32_t *pdwAffinity)'),
+    };
+  } catch (err) {
+    console.error('Could not load user32 via koffi, falling back to Electron only:', err);
+  }
+}
+
+function hwndOf(w) {
+  const buf = w.getNativeWindowHandle();
+  return buf.length >= 8 ? Number(buf.readBigUInt64LE(0)) : buf.readUInt32LE(0);
+}
+
+function readAffinity() {
+  if (!user32 || !win) return null;
+  const out = [0];
+  return user32.getAffinity(hwndOf(win), out) ? out[0] : null;
+}
+
+function applyProtection() {
+  if (!win || win.isDestroyed()) return;
+  win.setContentProtection(protectedFromCapture);
+  if (user32) {
+    const hwnd = hwndOf(win);
+    if (protectedFromCapture) {
+      if (!user32.setAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE)) {
+        user32.setAffinity(hwnd, WDA_MONITOR); // older Windows
+      }
+    } else {
+      user32.setAffinity(hwnd, WDA_NONE);
+    }
+  }
+  actualAffinity = readAffinity();
+  sendState();
+}
+
+// Re-check every couple of seconds in case anything resets the flag.
+setInterval(() => {
+  if (!win || win.isDestroyed() || !user32) return;
+  const now = readAffinity();
+  const wanted = protectedFromCapture ? [WDA_EXCLUDEFROMCAPTURE, WDA_MONITOR] : [WDA_NONE];
+  if (!wanted.includes(now)) applyProtection();
+  else if (now !== actualAffinity) { actualAffinity = now; sendState(); }
+}, 2000);
 
 function createWindow() {
   const { workArea } = screen.getPrimaryDisplay();
@@ -33,11 +95,8 @@ function createWindow() {
     },
   });
 
-  // The core trick. On Windows 10 2004+ this calls
-  // SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE): the window stays
-  // visible to you, but OBS, Zoom, Teams, Meet, Loom, Snipping Tool, etc.
-  // see straight through it. (Older Windows shows a black rectangle instead.)
-  win.setContentProtection(protectedFromCapture);
+  // The core trick: exclude the window from capture (see applyProtection).
+  applyProtection();
 
   // Stay above fullscreen apps and the taskbar.
   win.setAlwaysOnTop(true, 'screen-saver');
@@ -45,8 +104,10 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'index.html'));
   win.once('ready-to-show', () => {
     win.show();
-    sendState();
+    applyProtection();
   });
+  win.on('show', applyProtection);
+  win.on('restore', applyProtection);
   win.on('closed', () => { win = null; });
 }
 
@@ -54,6 +115,9 @@ function sendState() {
   if (!win) return;
   win.webContents.send('state', {
     protectedFromCapture,
+    // null = can't verify (non-Windows, or user32 unavailable)
+    actualAffinity,
+    verifiable: !!user32,
     clickThrough,
     platform: process.platform,
     windowsBuild: process.platform === 'win32' ? Number(require('os').release().split('.')[2] || 0) : null,
@@ -84,7 +148,7 @@ function registerShortcuts() {
   globalShortcut.register('CommandOrControl+Alt+T', () => setClickThrough(!clickThrough));
   globalShortcut.register('CommandOrControl+Alt+H', () => {
     if (!win) return;
-    if (win.isVisible()) win.hide(); else win.showInactive();
+    if (win.isVisible()) win.hide(); else { win.showInactive(); applyProtection(); }
   });
 }
 
@@ -102,13 +166,17 @@ ipcMain.handle('open-script', async () => {
 });
 
 ipcMain.on('set-opacity', (_e, value) => {
-  if (win) win.setOpacity(Math.min(1, Math.max(0.2, Number(value) || 1)));
+  if (!win) return;
+  const v = Math.min(1, Math.max(0.2, Number(value) || 1));
+  if (v === win.getOpacity()) return;
+  win.setOpacity(v);
+  // Opacity turns the window into a layered window; re-apply protection.
+  applyProtection();
 });
 
 ipcMain.on('set-protection', (_e, on) => {
   protectedFromCapture = !!on;
-  if (win) win.setContentProtection(protectedFromCapture);
-  sendState();
+  applyProtection();
 });
 
 ipcMain.on('set-click-through', (_e, on) => setClickThrough(!!on));

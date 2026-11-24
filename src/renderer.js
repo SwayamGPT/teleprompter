@@ -269,18 +269,32 @@
   // Capture-protection / click-through state from the main process.
   api.onState((st) => {
     els.protect.checked = st.protectedFromCapture;
-    els.pill.textContent = st.protectedFromCapture ? 'Hidden from capture' : 'VISIBLE in capture';
-    els.pill.className = `pill ${st.protectedFromCapture ? 'ok' : 'bad'}`;
     els.clickThrough.checked = st.clickThrough;
     els.ctBanner.hidden = !st.clickThrough;
 
-    let warn = '';
-    if (st.platform !== 'win32' && st.platform !== 'darwin') {
-      els.pill.textContent = 'Not hidden on this OS';
-      els.pill.className = 'pill bad';
+    // Badge reflects what Windows actually reports, not what we asked for.
+    const a = st.actualAffinity;
+    let label, ok, warn = '';
+    if (!st.protectedFromCapture) {
+      label = 'VISIBLE in capture'; ok = false;
+    } else if (st.platform !== 'win32' && st.platform !== 'darwin') {
+      label = 'Not hidden on this OS'; ok = false;
       warn = 'This OS does not support hiding windows from capture — the script WILL be visible in recordings.';
-    } else if (st.platform === 'win32' && st.windowsBuild && st.windowsBuild < 19041) {
-      warn = 'Windows older than 10 (2004): recordings will show a black box here instead of hiding it. Update Windows for full invisibility.';
+    } else if (st.platform === 'darwin' || !st.verifiable) {
+      label = 'Hidden (unverified)'; ok = true;
+    } else if (a === 0x11) {
+      label = 'Hidden from capture ✓'; ok = true;
+    } else if (a === 0x01) {
+      label = 'Shows as black box'; ok = false;
+      warn = 'Windows only allowed "black box" mode (Windows 10 older than version 2004). Update Windows for full invisibility.';
+    } else {
+      label = 'NOT hidden'; ok = false;
+      warn = 'Windows refused to hide this window from capture. Try restarting the app; if it persists, please report your Windows version.';
+    }
+    els.pill.textContent = label;
+    els.pill.className = `pill ${ok ? 'ok' : 'bad'}`;
+    if (!warn && st.platform === 'win32' && st.windowsBuild && st.windowsBuild < 19041 && st.protectedFromCapture) {
+      warn = 'Windows older than 10 (2004): recordings will show a black box here instead of hiding it.';
     }
     els.osWarning.textContent = warn;
     els.osWarning.hidden = !warn;

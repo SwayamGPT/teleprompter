@@ -63,6 +63,19 @@ You can also skip the local build: every push to `main` runs the **Build Windows
 
 > The `.exe` is not code-signed, so Windows SmartScreen may warn on first launch. Click *More info → Run anyway*.
 
+## The capture badge
+
+The badge in the title bar shows what **Windows reports**, not just what the app requested:
+
+| Badge | Meaning |
+| --- | --- |
+| 🟢 **Hidden from capture ✓** | Windows confirmed `WDA_EXCLUDEFROMCAPTURE`, so recordings show what's behind the window. |
+| 🔴 **Shows as black box** | Windows 10 older than version 2004. Recordings show a black rectangle. |
+| 🔴 **NOT hidden** | Windows refused the request. Restart the app. |
+| 🔴 **VISIBLE in capture** | You turned off *Hide from capture*. |
+
+The app re-applies the protection whenever the window is shown, restored or has its opacity changed, and re-checks it every 2 seconds.
+
 ## Limitations
 
 - **Phone or external camera pointed at the screen:** OS-level hiding can't help when a camera films the monitor itself.
