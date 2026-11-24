@@ -8,7 +8,8 @@
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win",
-    "dist:portable": "electron-builder --win portable"
+    "dist:portable": "electron-builder --win portable",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer.js && node -e \"JSON.parse(require('fs').readFileSync('package.json'))\""
   },
   "devDependencies": {
     "electron": "33.2.1",
@@ -33,7 +34,8 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "StealthTeleprompter-${version}-Setup.exe"
     },
     "portable": {
       "artifactName": "StealthTeleprompter-${version}-portable.exe"

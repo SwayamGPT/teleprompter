@@ -59,7 +59,22 @@ npm run dist
 
 This creates an installer and a portable `.exe` in `dist/`.
 
-You can also skip the local build: every push to `main` runs the **Build Windows app** GitHub Action. Open the run under the repository's *Actions* tab and download `StealthTeleprompter-windows` from its artifacts.
+### CI/CD (GitHub Actions)
+
+`.github/workflows/build.yml` runs automatically:
+
+| Trigger | What happens |
+| --- | --- |
+| Push to `main` or a pull request | Checks the code, then builds the installer and portable `.exe` on Windows. Download them from the run's **Artifacts** (`StealthTeleprompter-windows`). |
+| Push a tag such as `v1.0.1` | Builds with that version number and publishes a **GitHub Release** with both `.exe` files attached. |
+| *Run workflow* button (Actions tab) | Same as a push to `main`. |
+
+To publish a release:
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
 
 > The `.exe` is not code-signed, so Windows SmartScreen may warn on first launch. Click *More info → Run anyway*.
 
